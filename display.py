@@ -26,7 +26,7 @@ pygame.init()
 
 # tabs: up next, countdown, during race, after race
 tab = 0
-players = ["1","2","3","4"]
+players = ["","","",""]
 # find monitor
 monitor_info = pygame.display.list_modes(display=1)  # Assuming monitor index is 1
 if len(monitor_info) > 0:
@@ -45,21 +45,34 @@ during_race = cv2.VideoCapture("Car_going_down_track.mp4")
 
 
 def scores(str_data):
+    global players
     index = 0
     values = []
+    raw_scores = {}
+    hold =""
     for i in range(len(str_data)):
         if str_data[i] == ",":
             index += 1
+            values.append((float(hold))/1000)
+            hold = ""
         else:
-            values[index] += str(str_data[i])
-    return(values)
+            hold += str(str_data[i])
+    for i in range(len(values)):
+        raw_scores[players[i]] = values[i]
+    sorted_scores = dict(sorted(raw_scores.items(), key=lambda item: item[1]))
+    raw_race_scores_list = []
+    for key in sorted_scores.keys():
+        raw_race_scores_list.append(key)
+    print(raw_race_scores_list)
+    race_scores_list = [raw_race_scores_list[3],raw_race_scores_list[1],raw_race_scores_list[0],raw_race_scores_list[2]]
+    return(race_scores_list)
 # send players before match starts
 def up_next():
     global players
     Win.blit(next_race, (0,0))
     for i in range(4):
         draw_text = main_font.render(players[i], 1, BLACK)
-        Win.blit(draw_text, (839,344+(141*i)))
+        Win.blit(draw_text, (839,305+(175*i)))
 def race_started():
     ret, during_race_frame = during_race.read()
     if not ret:
@@ -75,14 +88,14 @@ def pre_race():
     frame = pygame.surfarray.make_surface(frame.swapaxes(0, 1))
     Win.blit(frame, (0, 0))
 def race_finished():
-    global winners
+    global race_scores
     Win.blit(finished_race, (0,0))
     for i in range(4):
-        draw_text = main_font.render(winners[i], 1, BLACK)
-        Win.blit(draw_text, (320+(359*i),980))
+        draw_text = main_font.render(str(race_scores[i]), 1, BLACK)
+        Win.blit(draw_text, (384+(360*i),960))
 
 def main():
-    global tab, players
+    global tab, players, race_scores
     Run = True
     while Run:
         # Check if there is incoming data (no blocking)
@@ -97,8 +110,10 @@ def main():
                 elif message == "race finished":
                     tab = 3
                 elif message == "racers":
-                    str_players = client_socket.recv(1024)
+                    data = client_socket.recv(1024)
+                    str_players = data.decode()
                     player = 0
+                    players = ["","","",""]
                     for i in range(len(str_players)):
                         if str_players[i] == ",":
                             player += 1
@@ -126,13 +141,14 @@ def main():
         elif tab == 1:
             pre_race()
         elif tab == 2:
-            #time_elapsed = [time.time() - start_time]
             race_started()
         elif tab == 3:
             race_finished()
+            if keys_pressed[pygame.K_n]:
+                tab = 0
+                during_race.set(cv2.CAP_PROP_POS_FRAMES,0)
         #updates display
         pygame.display.flip()
-        #print(tab)
 
 if __name__ == "__main__":
     main()
