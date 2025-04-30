@@ -37,8 +37,8 @@ Win = pygame.display.set_mode((width, height), pygame.FULLSCREEN, display=1)
 pygame.display.set_caption("Race track")
 
 # Import files
-finished_race = pygame.image.load(r'D:\\Car track\\Python track file\\awana_race_pictures.png')
-next_race = pygame.image.load(r'D:\\Car track\\Python track file\\Up_Next.png')
+finished_race = pygame.image.load('awana_race_pictures.png')
+next_race = pygame.image.load('Up_Next.png')
 before_race = cv2.VideoCapture("pre_race.mp4")
 during_race = cv2.VideoCapture("Car_going_down_track.mp4")
 
