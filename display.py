@@ -16,7 +16,7 @@ client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 # Connect to server
 while(1==1):
     try:
-        client_socket.connect(('192.168.68.53', 7777))
+        client_socket.connect(('192.168.68.52', 7777))
         break
     except:
         pass
@@ -81,7 +81,7 @@ def race_finished():
         Win.blit(draw_text, (320+(359*i),980))
 
 def main():
-    global tab
+    global tab, players
     Run = True
     while Run:
         # Check if there is incoming data (no blocking)
@@ -95,6 +95,18 @@ def main():
                     tab = 2
                 elif message == "race finished":
                     tab = 3
+                elif message == "racers":
+                    str_players = client_socket.recv(1024)
+                    player = 0
+                    hold = ""
+                    for i in range(len(str_players)):
+                        if str_players[i] == ",":
+                            players[player] = int(hold)
+                            player += 1
+                            hold = ""
+                        else:
+                            hold += str_players[i]
+                        players[player] = int(hold)
                 else:
                     race_scores = scores(message)
         # tell server your connected
