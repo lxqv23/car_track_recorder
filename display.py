@@ -26,15 +26,14 @@ pygame.init()
 
 # tabs: up next, countdown, during race, after race
 tab = 0
-'''
 # find monitor
 monitor_info = pygame.display.list_modes(display=1)  # Assuming monitor index is 1
 if len(monitor_info) > 0:
     width, height = monitor_info[0]
 else:
     print("No alternative monitor found!")
-'''
-Win = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+
+Win = pygame.display.set_mode((width, height), pygame.FULLSCREEN, display=1)
 pygame.display.set_caption("Race track")
 
 # Import files
