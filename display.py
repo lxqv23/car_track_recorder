@@ -16,7 +16,7 @@ client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 # Connect to server
 while(1==1):
     try:
-        client_socket.connect(('localhost', 7777))
+        client_socket.connect(('192.168.68.53', 7777))
         break
     except:
         pass
