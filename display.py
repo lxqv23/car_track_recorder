@@ -26,6 +26,7 @@ pygame.init()
 
 # tabs: up next, countdown, during race, after race
 tab = 0
+players = ["1","2","3","4"]
 # find monitor
 monitor_info = pygame.display.list_modes(display=1)  # Assuming monitor index is 1
 if len(monitor_info) > 0:
@@ -98,15 +99,11 @@ def main():
                 elif message == "racers":
                     str_players = client_socket.recv(1024)
                     player = 0
-                    hold = ""
                     for i in range(len(str_players)):
                         if str_players[i] == ",":
-                            players[player] = int(hold)
                             player += 1
-                            hold = ""
                         else:
-                            hold += str_players[i]
-                        players[player] = int(hold)
+                            players[player] += str_players[i]
                 else:
                     race_scores = scores(message)
         # tell server your connected
@@ -121,7 +118,7 @@ def main():
                 pygame.quit()
                 sys.exit()
                 Run = False
-        if tab == 3:
+        if tab == 0:
             up_next()
             if keys_pressed[pygame.K_r]:
                 tab = 1
@@ -131,7 +128,7 @@ def main():
         elif tab == 2:
             #time_elapsed = [time.time() - start_time]
             race_started()
-        elif tab == 0:
+        elif tab == 3:
             race_finished()
         #updates display
         pygame.display.flip()
