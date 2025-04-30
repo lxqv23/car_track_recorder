@@ -1,130 +1,195 @@
-# *** use sockets to connect to the reace track recorder
+# *** put files on a tkinter window to control display 
 
-# import libraries
-import pygame 
-import sys
-import cv2
+import serial
+import random
 import socket
-import select
-import time
-pygame.font.init()
-# set up font for pygame
-main_font = pygame.font.SysFont('comicsans', 100)
-BLACK = (0,0,0)
+import threading
+import math
+
 # Create a TCP/IP socket
-client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# Connect to server
-while(1==1):
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# Bind to localhost on port 77777
+server_socket.bind(('0.0.0.0', 7777))
+# Listen for incoming connections
+server_socket.listen(1)
+# Accept a connection
+conn, addr = server_socket.accept()
+
+try:
+    arduino = serial.Serial('COM5', 115200, timeout=.1)
+except:
+    print("No serial")
+
+current_race = 0
+race_happening = False
+results = {}
+racers_printed = False
+
+def is_client_connected(sock):
     try:
-        client_socket.connect(('192.168.68.53', 7777))
-        break
-    except:
-        pass
+        # Attempt to receive data (non-blocking with MSG_PEEK)
+        data = sock.recv(1024, socket.MSG_PEEK)
+        if not data:
+            # Client disconnected gracefully (received 0 bytes)
+            return False
+        else:
+            # Client is still connected (data available)
+            return True
+    except ConnectionResetError:
+        # Client disconnected abruptly
+        return False
+    except ConnectionAbortedError:
+        return False
+    except Exception as e:
+        # Handle other potential errors (e.g., socket closed on server side)
+        print(f"Error checking connection: {e}")
+        return False
 
-# make window
-pygame.init()
+def group():
+    global group
+    choices = ["cubbies", "sparks", "tnt", "trek"]
+    group = ""
+    while (True):
+        group = input("Load(cubbies, sparks, tnt, trek): ").lower()
+        if (group == "cubbies" or group == "sparks" or group == "tnt" or group == "trek"):
+            break
+        else:
+            print("invalid input")
 
-# tabs: up next, countdown, during race, after race
-tab = 0
-'''
-# find monitor
-monitor_info = pygame.display.list_modes(display=1)  # Assuming monitor index is 1
-if len(monitor_info) > 0:
-    width, height = monitor_info[0]
-else:
-    print("No alternative monitor found!")
-'''
-Win = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-pygame.display.set_caption("Race track")
+def load(current_race, lane, group):
+    file = open(f"{group}.txt", "r")
+    text = file.readlines()
+    lane_car = 0
+    car_numbers = ["","","",""]
+    for i in range(len(text[current_race])):
+        if (text[current_race][i] == ","):
+            lane_car += 1
+        else:
+            if (text[current_race][i] != "\n"):
+                car_numbers[lane_car] += text[current_race][i]
+    return(int(car_numbers[lane]))
 
-# Import files
-finished_race = pygame.image.load(r'D:\\Car track\\Python track file\\awana_race_pictures.png')
-next_race = pygame.image.load(r'D:\\Car track\\Python track file\\Up_Next.png')
-before_race = cv2.VideoCapture("pre_race.mp4")
-during_race = cv2.VideoCapture("Car_going_down_track.mp4")
+def generate_groups():
+    cubbies_amount = int(input("How many Cubbies: "))
+    sparks_amount = int(input("How many Sparks: "))
+    tnt_amount = int(input("How many Tnt: "))
+    trek_amount = int(input("How many Trek: "))
+    
+    cubbies_f, cubbies_t = fours_threes(cubbies_amount)
+    sparks_f, sparks_t = fours_threes(sparks_amount)
+    tnt_f, tnt_t = fours_threes(tnt_amount)
+    trek_f, trek_t = fours_threes(trek_amount)
+    
+    cubbies_file = open("cubbies.txt", "a")
+    sparks_file = open("sparks.txt", "a")
+    tnt_file = open("tnt.txt", "a")
+    trek_file = open("trek.txt", "a")
 
+    # generate fours
+    for i in range(math.floor(cubbies_f)):
+        car = random.randint(0, cubbies_amount-i)
+        cubbies_file.write()
+    for i in range(math.floor(sparks_f)):
+        car = random.randint(0, sparks_amount-i)
+        sparks_file.write()
+    for i in range(math.floor(tnt_f)):
+        car = random.randint(0, tnt_amount-i)
+        tnt_file.write()
+    for i in range(math.floor(trek_f)):
+        car = random.randint(0, trek_amount-i)
+        trek_file.write()
+    
+    # generate extras
+    for i in range(cubbies_t):
+        car = random.randint(0, cubbies_amount-i - cubbies_f*4)
+        cubbies_file.write()
+    for i in range(sparks_t):
+        car = random.randint(0, sparks_amount-i - sparks_f*4)
+        sparks_file.write()
+    for i in range(tnt_t):
+        car = random.randint(0, tnt_amount-i - tnt_f*4)
+        tnt_file.write()
+    for i in range(trek_t):
+        car = random.randint(0, trek_amount-i - trek_f*4)
+        trek_file.write()
+    
+def fours_threes(n):
+    return (n/4, n%4)
 
 def scores(str_data):
-    index = 0
-    values = []
+    global results, current_race
+    car = 0
+    current_race_results = {}
+    str_value = ""
     for i in range(len(str_data)):
-        if str_data[i] == ",":
-            index += 1
-        else:
-            values[index] += str(str_data[i])
-    return(values)
-# send players before match starts
-def up_next():
-    global players
-    Win.blit(next_race, (0,0))
-    for i in range(4):
-        draw_text = main_font.render(players[i], 1, BLACK)
-        Win.blit(draw_text, (839,344+(141*i)))
-def race_started():
-    ret, during_race_frame = during_race.read()
-    if not ret:
-        return -1
-    during_race_frame = cv2.cvtColor(during_race_frame, cv2.COLOR_BGR2RGB)
-    during_race_frame = pygame.surfarray.make_surface(during_race_frame.swapaxes(0, 1))
-    Win.blit(during_race_frame, (0, 0))
-def pre_race():
-    ret, frame = before_race.read()
-    if not ret:
-        return -1
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    frame = pygame.surfarray.make_surface(frame.swapaxes(0, 1))
-    Win.blit(frame, (0, 0))
-def race_finished():
-    global winners
-    Win.blit(finished_race, (0,0))
-    for i in range(4):
-        draw_text = main_font.render(winners[i], 1, BLACK)
-        Win.blit(draw_text, (320+(359*i),980))
+        if (str_data[i] == ","):
+            name = load(current_race-1, car, group)
+            results.update({name : int(str_value[:-2]) /1000})
+            current_race_results.update({name : int(str_value[:-2]) /1000})
+            str_value = ""
+            car += 1
+        if (str_data[i].isdigit()):
+            str_value += str_data[i]
+    results = dict(sorted(results.items(), key=lambda x: x[1]))
+    print(results)
+    i = 0
+    while(1==1):
+        try:
+            file = open(f"Race {i}- Race_{current_race}.txt", "r")
+        except:
+            file = open(f"Race {i}- Race_{current_race}.txt", "w")
+            break
+        i += 1
+    file.write(str(current_race_results))
+    file.close()
 
+group()
 def main():
-    global tab
-    Run = True
-    while Run:
-        # Check if there is incoming data (no blocking)
-        ready_to_read, _, _ = select.select([client_socket], [], [], 0)
-        if ready_to_read:
-            data = client_socket.recv(1024)
-            if data:
-                message = data.decode()
-                if message == "race started":
-                    start_time = time.time()
-                    tab = 2
-                elif message == "race finished":
-                    tab = 3
+    global racers_printed, current_race, racers_printed, conn
+    while True:
+        if is_client_connected(conn):
+            pass
+        else:
+            conn, addr = server_socket.accept()
+        data = arduino.readline()[:-2] #the last bit gets rid of the new-line chars
+        str_data = data.decode('utf-8')
+        if (racers_printed == False):
+            print(f"Racers: {load(current_race, 0, group)},{load(current_race, 1, group)},{load(current_race, 2, group)},{load(current_race, 3, group)}")
+            racers_printed = True
+        if data:
+            print(str_data)
+            if (str_data == "Race Started"):
+                conn.sendall(b"race started")
+                race_happening = True
+                current_race += 1
+                print(current_race)
+            if (str_data == "Race Finished"):
+                conn.sendall(b"race finished")
+                race_happening = False
+                racers_printed = False
+            if (str_data[0].isdigit()):
+                conn.sendall(str_data.encode('utf-8'))
+                scores(str_data)
+                print(results)
+                Confrim = input("Save Race(y/n): ")
+                if (Confrim == "y"):
+                    Confrim_extra = input("Are you sure you want to save(y/n): ")
+                    if (Confrim_extra == "y"):
+                        pass
+                    else:
+                        Confrim_extra_extra = input("Are you sure you want to reset(y/n): ")
+                        if (Confrim_extra == "y"):
+                            current_race -= 1
+                        else:
+                            pass
                 else:
-                    race_scores = scores(message)
-        # tell server your connected
-        client_socket.sendall(b'CONNECTED')
-        keys_pressed = pygame.key.get_pressed()
-        mouse_pos = pygame.mouse.get_pos()
-        print(mouse_pos)
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                # Close socekt connection
-                client_socket.close()
-                pygame.quit()
-                sys.exit()
-                Run = False
-        if tab == 3:
-            up_next()
-            if keys_pressed[pygame.K_r]:
-                tab = 1
-                before_race.set(cv2.CAP_PROP_POS_FRAMES, 0)
-        elif tab == 1:
-            pre_race()
-        elif tab == 2:
-            #time_elapsed = [time.time() - start_time]
-            race_started()
-        elif tab == 0:
-            race_finished()
-        #updates display
-        pygame.display.flip()
-        #print(tab)
+                    Confrim_extra = input("Are you sure you want to reset(y/n): ")
+                    if (Confrim_extra == "y"):
+                        current_race -= 1
+                    else:
+                        pass
 
 if __name__ == "__main__":
     main()
+# Close socket connection 
+conn.close()
