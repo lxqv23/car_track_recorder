@@ -119,6 +119,12 @@ def main():
                             player += 1
                         else:
                             players[player] += str_players[i]
+                elif message =="countdown":
+                    tab = 1
+                    before_race.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                elif message == "up next":
+                    tab = 0
+                    during_race.set(cv2.CAP_PROP_POS_FRAMES,0)
                 else:
                     race_scores = scores(message)
         # tell server your connected
@@ -135,18 +141,12 @@ def main():
                 Run = False
         if tab == 0:
             up_next()
-            if keys_pressed[pygame.K_r]:
-                tab = 1
-                before_race.set(cv2.CAP_PROP_POS_FRAMES, 0)
         elif tab == 1:
             pre_race()
         elif tab == 2:
             race_started()
         elif tab == 3:
             race_finished()
-            if keys_pressed[pygame.K_n]:
-                tab = 0
-                during_race.set(cv2.CAP_PROP_POS_FRAMES,0)
         #updates display
         pygame.display.flip()
 
